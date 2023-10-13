@@ -4,8 +4,10 @@ import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import ru.job4j.domain.Person;
 import ru.job4j.repository.PersonRepository;
+import ru.job4j.service.PersonService;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,16 +17,16 @@ import java.util.Optional;
 @AllArgsConstructor
 public class PersonController {
     
-    private final PersonRepository personRepository;
+    private final PersonService personService;
 
     @GetMapping("/")
     public List<Person> findAll() {
-        return personRepository.findAll();
+        return personService.findAll();
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<Person> findById(@PathVariable int id) {
-        Optional<Person> optPerson = personRepository.findById(id);
+        Optional<Person> optPerson = personService.findById(id);
         return new ResponseEntity<Person>(
                 optPerson.orElse(new Person()),
                 optPerson.isPresent() ? HttpStatus.OK : HttpStatus.NOT_FOUND
@@ -33,23 +35,28 @@ public class PersonController {
 
     @PostMapping("/")
     public ResponseEntity<Person> create(@RequestBody Person person) {
-        return new ResponseEntity<Person>(
-                personRepository.save(person),
-                HttpStatus.CREATED
+        Optional<Person> optPerson = personService.save(person);
+        return new ResponseEntity<>(
+                optPerson.orElse(new Person()),
+                optPerson.isPresent() ? HttpStatus.CREATED : HttpStatus.CONFLICT
         );
     }
 
     @PutMapping("/")
     public ResponseEntity<Void> update(@RequestBody Person person) {
-        personRepository.save(person);
-        return ResponseEntity.ok().build();
+        boolean isUpdated = personService.update(person);
+        if (isUpdated) {
+            return ResponseEntity.ok().build();
+        }
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Person is not updated");
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable int id) {
-        Person person = new Person();
-        person.setId(id);
-        personRepository.delete(person);
-        return ResponseEntity.ok().build();
+        boolean isDeleted = personService.deleteById(id);
+        if (isDeleted) {
+            return ResponseEntity.ok().build();
+        }
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Person is not deleted");
     }
 }
