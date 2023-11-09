@@ -1,16 +1,21 @@
 package ru.job4j.service;
 
 import lombok.AllArgsConstructor;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import ru.job4j.domain.Person;
 import ru.job4j.repository.PersonRepository;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
 @Service
 @AllArgsConstructor
-public class PersonServiceImpl implements PersonService {
+public class PersonServiceImpl implements PersonService, UserDetailsService {
 
     private final PersonRepository personRepository;
 
@@ -51,5 +56,15 @@ public class PersonServiceImpl implements PersonService {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        Optional<Person> optional = personRepository.findByUsername(username);
+        if (optional.isEmpty()) {
+            throw new UsernameNotFoundException(username);
+        }
+        Person person = optional.get();
+        return new User(person.getUsername(), person.getPassword(), Collections.emptyList());
     }
 }

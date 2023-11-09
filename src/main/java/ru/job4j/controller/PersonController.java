@@ -3,6 +3,7 @@ package ru.job4j.controller;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import ru.job4j.domain.Person;
@@ -17,6 +18,7 @@ import java.util.Optional;
 public class PersonController {
     
     private final PersonService personService;
+    private PasswordEncoder passwordEncoder;
 
     @GetMapping("/")
     public List<Person> findAll() {
@@ -34,6 +36,7 @@ public class PersonController {
 
     @PostMapping("/")
     public ResponseEntity<Person> create(@RequestBody Person person) {
+        person.setPassword(passwordEncoder.encode(person.getPassword()));
         Optional<Person> optPerson = personService.save(person);
         return new ResponseEntity<>(
                 optPerson.orElse(new Person()),
@@ -43,6 +46,7 @@ public class PersonController {
 
     @PutMapping("/")
     public ResponseEntity<Void> update(@RequestBody Person person) {
+        person.setPassword(passwordEncoder.encode(person.getPassword()));
         boolean isUpdated = personService.update(person);
         if (isUpdated) {
             return ResponseEntity.ok().build();
