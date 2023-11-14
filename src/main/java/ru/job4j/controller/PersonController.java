@@ -2,9 +2,12 @@ package ru.job4j.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.util.MultiValueMap;
+import org.springframework.util.MultiValueMapAdapter;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import ru.job4j.domain.Person;
@@ -13,9 +16,7 @@ import ru.job4j.service.PersonService;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @RestController
 @RequestMapping("/person")
@@ -28,8 +29,11 @@ public class PersonController {
     private static final String PATTERN = "(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9@#$%]).{8,}";
 
     @GetMapping("/")
-    public List<Person> findAll() {
-        return personService.findAll();
+    public ResponseEntity<List<Person>> findAll() {
+        List<Person> list = personService.findAll();
+        MultiValueMap<String, String> header =
+                new MultiValueMapAdapter<>(Map.of("Content-Type", List.of("application/json")));
+        return new ResponseEntity<>(list, header, HttpStatus.OK);
     }
 
     @GetMapping("/{id}")
@@ -79,7 +83,7 @@ public class PersonController {
         person.setPassword(passwordEncoder.encode(person.getPassword()));
         boolean isUpdated = personService.update(person);
         if (isUpdated) {
-            return ResponseEntity.ok().build();
+            return new ResponseEntity<>(HttpStatus.OK);
         }
         throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Person is not updated");
     }
