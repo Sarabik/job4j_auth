@@ -16,7 +16,11 @@ import ru.job4j.service.PersonService;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.*;
+
+import static ru.job4j.util.NonNullFieldValueReplacer.updateAllNonNullFields;
 
 @RestController
 @RequestMapping("/person")
@@ -50,16 +54,7 @@ public class PersonController {
 
     @PostMapping("/")
     public ResponseEntity<Person> create(@RequestBody Person person) {
-        if (!person.getPassword().matches(PATTERN)) {
-            throw new IllegalArgumentException(
-                    "Invalid password. Password must be at least 8 characters long "
-                            + "with 1 uppercase and 1 lowercase character");
-        }
-        if (person.getUsername().length() < 6) {
-            throw new IllegalArgumentException(
-                    "Invalid username. Username must be at least 6 characters long"
-            );
-        }
+        usernameAndPasswordValidation(person);
         person.setPassword(passwordEncoder.encode(person.getPassword()));
         Optional<Person> optPerson = personService.save(person);
         return new ResponseEntity<>(
@@ -70,16 +65,7 @@ public class PersonController {
 
     @PutMapping("/")
     public ResponseEntity<Void> update(@RequestBody Person person) {
-        if (!person.getPassword().matches(PATTERN)) {
-            throw new IllegalArgumentException(
-                    "Invalid password. Password must be at least 8 characters long "
-                            + "with 1 uppercase and 1 lowercase character");
-        }
-        if (person.getUsername().length() < 6) {
-            throw new IllegalArgumentException(
-                    "Invalid username. Username must be at least 6 characters long"
-            );
-        }
+        usernameAndPasswordValidation(person);
         person.setPassword(passwordEncoder.encode(person.getPassword()));
         boolean isUpdated = personService.update(person);
         if (isUpdated) {
@@ -98,6 +84,18 @@ public class PersonController {
         throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Person is not deleted");
     }
 
+    @PatchMapping("/")
+    public ResponseEntity<Person> patch(@RequestBody Person person) throws InvocationTargetException, IllegalAccessException {
+        Optional<Person> opt = personService.findById(person.getId());
+        if (opt.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Person is not found and not patched");
+        }
+        Person current = opt.get();
+        updateAllNonNullFields(current, person);
+        boolean isUpdated = personService.update(current);
+        return new ResponseEntity<>(current, HttpStatus.OK);
+    }
+
     @ExceptionHandler(value = {IllegalArgumentException.class})
     public void exceptionHandler(Exception e,
                                  HttpServletRequest request,
@@ -110,5 +108,18 @@ public class PersonController {
                     put("type", e.getClass());
                 }}
         ));
+    }
+
+    private void usernameAndPasswordValidation(Person person) {
+        if (!person.getPassword().matches(PATTERN)) {
+            throw new IllegalArgumentException(
+                    "Invalid password. Password must be at least 8 characters long "
+                            + "with 1 uppercase and 1 lowercase character");
+        }
+        if (person.getUsername().length() < 6) {
+            throw new IllegalArgumentException(
+                    "Invalid username. Username must be at least 6 characters long"
+            );
+        }
     }
 }
