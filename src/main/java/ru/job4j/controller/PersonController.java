@@ -2,7 +2,6 @@ package ru.job4j.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -15,9 +14,9 @@ import ru.job4j.service.PersonService;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.validation.Valid;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.*;
 
 import static ru.job4j.util.NonNullFieldValueReplacer.updateAllNonNullFields;
@@ -53,8 +52,8 @@ public class PersonController {
     }
 
     @PostMapping("/")
-    public ResponseEntity<Person> create(@RequestBody Person person) {
-        usernameAndPasswordValidation(person);
+    public ResponseEntity<Person> create(@Valid @RequestBody Person person) {
+        passwordValidation(person);
         person.setPassword(passwordEncoder.encode(person.getPassword()));
         Optional<Person> optPerson = personService.save(person);
         return new ResponseEntity<>(
@@ -64,8 +63,8 @@ public class PersonController {
     }
 
     @PutMapping("/")
-    public ResponseEntity<Void> update(@RequestBody Person person) {
-        usernameAndPasswordValidation(person);
+    public ResponseEntity<Void> update(@Valid @RequestBody Person person) {
+        passwordValidation(person);
         person.setPassword(passwordEncoder.encode(person.getPassword()));
         boolean isUpdated = personService.update(person);
         if (isUpdated) {
@@ -85,7 +84,7 @@ public class PersonController {
     }
 
     @PatchMapping("/")
-    public ResponseEntity<Person> patch(@RequestBody Person person) throws InvocationTargetException, IllegalAccessException {
+    public ResponseEntity<Person> patch(@Valid @RequestBody Person person) throws InvocationTargetException, IllegalAccessException {
         Optional<Person> opt = personService.findById(person.getId());
         if (opt.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Person is not found and not patched");
@@ -110,16 +109,12 @@ public class PersonController {
         ));
     }
 
-    private void usernameAndPasswordValidation(Person person) {
+    private void passwordValidation(Person person) {
         if (!person.getPassword().matches(PATTERN)) {
             throw new IllegalArgumentException(
                     "Invalid password. Password must be at least 8 characters long "
                             + "with 1 uppercase and 1 lowercase character");
         }
-        if (person.getUsername().length() < 6) {
-            throw new IllegalArgumentException(
-                    "Invalid username. Username must be at least 6 characters long"
-            );
-        }
     }
+
 }
