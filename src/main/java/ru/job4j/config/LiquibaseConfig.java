@@ -18,4 +18,5 @@ public class LiquibaseConfig {
         liquibase.setDataSource(ds);
         return liquibase;
     }
+
 }
